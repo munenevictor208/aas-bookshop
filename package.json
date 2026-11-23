@@ -1,0 +1,40 @@
+{
+  "name": "shopapp",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test \"tests/*.test.mjs\"",
+    "setup:admin": "node scripts/setup-admin.mjs",
+    "db:test": "node scripts/test-neon-connection.mjs",
+    "db:migrate": "node scripts/migrate-sqlite-to-neon.mjs",
+    "db:verify": "node scripts/verify-neon-migration.mjs",
+    "db:uploads": "node scripts/migrate-uploads-to-blob.mjs"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "dependencies": {
+    "@vercel/blob": "^2.9.0",
+    "@vercel/functions": "^3.11.3",
+    "next": "16.4.6",
+    "pg": "^8.23.1",
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^24.19.2",
+    "@types/pg": "^8.23.1",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.4.6",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
+}

@@ -1,0 +1,108 @@
+@import "tailwindcss";
+
+@theme inline {
+  --color-brand-50: #f1f7f1;
+  --color-brand-100: #dceade;
+  --color-brand-200: #b9d3bf;
+  --color-brand-300: #86b396;
+  --color-brand-400: #528e6c;
+  --color-brand-500: #357350;
+  --color-brand-600: #275d40;
+  --color-brand-700: #1f4d35;
+  --color-brand-800: #183d2b;
+  --color-brand-900: #123021;
+  --color-brand-950: #0b2016;
+
+  --color-cream-50: #fffdf7;
+  --color-cream-100: #fbf7ec;
+  --color-cream-200: #f5edd9;
+  --color-cream-300: #ecdfc2;
+
+  --color-gold-100: #fff6d6;
+  --color-gold-200: #fce9ad;
+  --color-gold-300: #f7d97e;
+  --color-gold-400: #eec65a;
+  --color-gold-500: #d6a62f;
+  --color-gold-600: #8f6814;
+
+  --color-cocoa-300: #b98d6b;
+  --color-cocoa-500: #8a5c3a;
+  --color-cocoa-700: #5d3c26;
+
+  --font-sans: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  --font-serif: Georgia, "Times New Roman", serif;
+  --font-mono: var(--font-geist-mono);
+}
+
+:root {
+  --background: #fffdf7;
+  --foreground: #183d2b;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  min-height: 100vh;
+  color: var(--foreground);
+  background-color: var(--background);
+  background-image:
+    radial-gradient(circle at 12% 8%, rgba(238, 198, 90, 0.09), transparent 32rem),
+    radial-gradient(circle at 88% 28%, rgba(31, 77, 53, 0.05), transparent 36rem);
+  font-family: var(--font-sans);
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-serif);
+}
+
+::selection {
+  background: #f7d97e;
+  color: #0b2016;
+}
+
+input:focus,
+textarea:focus,
+select:focus,
+button:focus-visible,
+a:focus-visible {
+  outline: 2px solid #eec65a;
+  outline-offset: 2px;
+}
+
+@layer components {
+  .brand-button {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-brand-800 px-6 py-3 text-center text-sm font-bold text-cream-50 shadow-sm transition hover:bg-brand-900 hover:shadow-md;
+  }
+
+  .brand-button-gold {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-gold-400 px-6 py-3 text-center text-sm font-bold text-brand-950 shadow-sm transition hover:bg-gold-300 hover:shadow-md;
+  }
+
+  .brand-button-outline {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl border border-brand-700 px-6 py-3 text-center text-sm font-bold text-brand-800 transition hover:bg-brand-800 hover:text-cream-50;
+  }
+
+  .brand-card {
+    @apply rounded-2xl border border-cream-300 bg-white shadow-sm;
+  }
+
+  .brand-eyebrow {
+    @apply text-xs font-bold uppercase tracking-[0.22em] text-gold-600;
+  }
+
+  .brand-input {
+    @apply w-full rounded-xl border border-cream-300 bg-cream-50 px-4 py-2.5 text-brand-900 placeholder:text-cocoa-300 focus:border-gold-500 focus:outline-none;
+  }
+
+  .brand-panel {
+    @apply rounded-2xl border border-cream-300 bg-cream-100;
+  }
+}
