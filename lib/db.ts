@@ -347,29 +347,209 @@ function createSqliteDatabase(): Database {
   return new SqliteDatabase(db);
 }
 
-function createPostgresDatabase(): Database {
+async function initializePostgresDatabase(db: Database): Promise<void> {
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS meta (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL
+    )
+  `);
+
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS categories (
+      id SERIAL PRIMARY KEY,
+      name TEXT NOT NULL UNIQUE,
+      icon TEXT NOT NULL DEFAULT '📁',
+      description TEXT NOT NULL DEFAULT '',
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP::text
+    )
+  `);
+
+  await db.execute(`
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_categories_name_lower
+    ON categories (LOWER(name))
+  `);
+
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS products (
+      id SERIAL PRIMARY KEY,
+      name TEXT NOT NULL,
+      description TEXT NOT NULL DEFAULT '',
+      price NUMERIC NOT NULL CHECK (price >= 0),
+      icon TEXT NOT NULL DEFAULT '📦',
+      category_id INTEGER REFERENCES categories(id) ON DELETE SET NULL,
+      image_url TEXT,
+      sku TEXT,
+      stock INTEGER CHECK (stock IS NULL OR stock >= 0),
+      is_active INTEGER NOT NULL DEFAULT 1 CHECK (is_active IN (0, 1)),
+      featured INTEGER NOT NULL DEFAULT 0 CHECK (featured IN (0, 1)),
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP::text,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP::text
+    )
+  `);
+
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS customers (
+      id SERIAL PRIMARY KEY,
+      name TEXT NOT NULL,
+      phone TEXT NOT NULL UNIQUE,
+      email TEXT NOT NULL DEFAULT '',
+      address TEXT NOT NULL DEFAULT '',
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP::text,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP::text
+    )
+  `);
+
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS orders (
+      id SERIAL PRIMARY KEY,
+      order_number TEXT NOT NULL UNIQUE,
+      customer_id INTEGER NOT NULL REFERENCES customers(id),
+      placed_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'Pending'
+        CHECK (status IN (${ORDER_STATUSES.map((status) => `'${status}'`).join(", ")})),
+      total NUMERIC NOT NULL CHECK (total >= 0),
+      payment TEXT NOT NULL DEFAULT 'Cash on Delivery',
+      delivery_address TEXT NOT NULL DEFAULT ''
+    )
+  `);
+
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS order_items (
+      id SERIAL PRIMARY KEY,
+      order_id INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+      product_id INTEGER REFERENCES products(id) ON DELETE SET NULL,
+      product_name TEXT NOT NULL,
+      quantity INTEGER NOT NULL CHECK (quantity > 0),
+      unit_price NUMERIC NOT NULL CHECK (unit_price >= 0),
+      line_total NUMERIC NOT NULL CHECK (line_total >= 0)
+    )
+  `);
+
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS login_attempts (
+      key TEXT PRIMARY KEY,
+      count INTEGER NOT NULL,
+      reset_at INTEGER NOT NULL
+    )
+  `);
+
+  await db.execute("CREATE INDEX IF NOT EXISTS idx_products_category ON products(category_id)");
+  await db.execute("CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status)");
+  await db.execute("CREATE INDEX IF NOT EXISTS idx_orders_customer ON orders(customer_id)");
+  await db.execute("CREATE INDEX IF NOT EXISTS idx_orders_placed_at ON orders(placed_at)");
+  await db.execute("CREATE INDEX IF NOT EXISTS idx_order_items_order ON order_items(order_id)");
+
+  for (const [name, detail] of Object.entries(CATEGORY_DETAILS)) {
+    await db.execute(
+      `UPDATE categories
+       SET icon = ?, description = ?
+       WHERE LOWER(name) = LOWER(?) AND description = ''`,
+      [detail.icon, detail.description, name]
+    );
+  }
+
+  for (let index = 0; index < seedCategoryNames.length; index++) {
+    const name = seedCategoryNames[index];
+    const detail = CATEGORY_DETAILS[name] ?? { icon: "📁", description: "" };
+
+    await db.execute(
+      `INSERT INTO categories (name, icon, description, sort_order)
+       VALUES (?, ?, ?, ?)
+       ON CONFLICT (name) DO NOTHING`,
+      [name, detail.icon, detail.description, index]
+    );
+  }
+
+  const productCount = await db.queryOne<{ count: string | number }>(
+    "SELECT COUNT(*) AS count FROM products"
+  );
+
+  if (Number(productCount?.count ?? 0) === 0) {
+    for (const product of seedProducts) {
+      const category = await db.queryOne<{ id: number }>(
+        "SELECT id FROM categories WHERE LOWER(name) = LOWER(?)",
+        [product.category]
+      );
+
+      await db.execute(
+        `INSERT INTO products
+          (name, description, price, icon, category_id, image_url, sku, stock, is_active, featured)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          product.name,
+          product.description,
+          product.price,
+          product.icon,
+          category?.id ?? null,
+          product.imageUrl ?? null,
+          product.sku ?? null,
+          product.stock ?? null,
+          product.isActive === false ? 0 : 1,
+          product.featured ? 1 : 0
+        ]
+      );
+    }
+  }
+
+  await db.execute(
+    `INSERT INTO meta (key, value)
+     VALUES ('schema_version', ?)
+     ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`,
+    [String(SCHEMA_VERSION)]
+  );
+
+  await db.execute(
+    `INSERT INTO meta (key, value)
+     VALUES ('seeded_at', ?)
+     ON CONFLICT (key) DO NOTHING`,
+    [new Date().toISOString()]
+  );
+}
+
+
+
+
+async function createPostgresDatabase(): Promise<Database> {
   const connectionString = process.env.DATABASE_URL;
-  if (!connectionString) throw new Error("DATABASE_URL is missing");
+
+  if (!connectionString) {
+    throw new Error("DATABASE_URL is missing");
+  }
+
   const pool = new pg.Pool({
     connectionString,
     max: 5,
     idleTimeoutMillis: 5_000,
     connectionTimeoutMillis: 10_000,
   });
-  if (process.env.VERCEL) attachDatabasePool(pool);
+
+  if (process.env.VERCEL) {
+    attachDatabasePool(pool);
+  }
+
   globalForDb.aasPgPool = pool;
-  return new PostgresDatabase(pool);
+
+  const database = new PostgresDatabase(pool);
+
+  await initializePostgresDatabase(database);
+
+  return database;
+}
+
+
+export function usesPostgres(): boolean {
+  return Boolean(process.env.DATABASE_URL?.trim());
 }
 
 export async function getDb(): Promise<Database> {
   if (!globalForDb.aasDbPromise) {
-    globalForDb.aasDbPromise = process.env.DATABASE_URL?.trim()
-      ? Promise.resolve(createPostgresDatabase())
+    globalForDb.aasDbPromise = usesPostgres()
+      ? createPostgresDatabase()
       : Promise.resolve(createSqliteDatabase());
   }
-  return globalForDb.aasDbPromise;
-}
 
-export function usesPostgres(): boolean {
-  return Boolean(process.env.DATABASE_URL?.trim());
+  return globalForDb.aasDbPromise;
 }
