@@ -171,7 +171,7 @@ function createFinalSchema(db: DatabaseSync): void {
     `CREATE TABLE IF NOT EXISTS categories (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL UNIQUE COLLATE NOCASE,
-      icon TEXT NOT NULL DEFAULT '📁',
+      icon TEXT NOT NULL DEFAULT 'ðŸ“',
       description TEXT NOT NULL DEFAULT '',
       sort_order INTEGER NOT NULL DEFAULT 0,
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
@@ -183,7 +183,7 @@ function createFinalSchema(db: DatabaseSync): void {
       name TEXT NOT NULL,
       description TEXT NOT NULL DEFAULT '',
       price NUMERIC NOT NULL CHECK (price >= 0),
-      icon TEXT NOT NULL DEFAULT '📦',
+      icon TEXT NOT NULL DEFAULT 'ðŸ“¦',
       category_id INTEGER REFERENCES categories(id) ON DELETE SET NULL,
       image_url TEXT,
       sku TEXT,
@@ -246,19 +246,19 @@ function createFinalSchema(db: DatabaseSync): void {
 
 const CATEGORY_DETAILS: Record<string, { icon: string; description: string }> = {
   Books: {
-    icon: "📚",
+    icon: "ðŸ“š",
     description: "Exercise books, reading books and textbooks for every learner.",
   },
   Stationery: {
-    icon: "✏️",
+    icon: "âœï¸",
     description: "Pens, pencils, markers and everyday writing essentials.",
   },
   "School Bags": {
-    icon: "🎒",
+    icon: "ðŸŽ’",
     description: "Durable bags made to carry a full school day.",
   },
   "School Supplies": {
-    icon: "📐",
+    icon: "ðŸ“",
     description: "Geometry sets, rulers and tools for every lesson.",
   },
 };
@@ -301,7 +301,7 @@ function seed(db: DatabaseSync): void {
       "INSERT INTO categories (name, icon, description, sort_order) VALUES (?, ?, ?, ?)"
     );
     seedCategoryNames.forEach((name, index) => {
-      const detail = CATEGORY_DETAILS[name] ?? { icon: "📁", description: "" };
+      const detail = CATEGORY_DETAILS[name] ?? { icon: "ðŸ“", description: "" };
       const result = insertCategory.run(name, detail.icon, detail.description, index);
       categoryIds.set(name, Number(result.lastInsertRowid));
     });
@@ -359,7 +359,7 @@ async function initializePostgresDatabase(db: Database): Promise<void> {
     CREATE TABLE IF NOT EXISTS categories (
       id SERIAL PRIMARY KEY,
       name TEXT NOT NULL UNIQUE,
-      icon TEXT NOT NULL DEFAULT '📁',
+      icon TEXT NOT NULL DEFAULT 'ðŸ“',
       description TEXT NOT NULL DEFAULT '',
       sort_order INTEGER NOT NULL DEFAULT 0,
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP::text
@@ -377,7 +377,7 @@ async function initializePostgresDatabase(db: Database): Promise<void> {
       name TEXT NOT NULL,
       description TEXT NOT NULL DEFAULT '',
       price NUMERIC NOT NULL CHECK (price >= 0),
-      icon TEXT NOT NULL DEFAULT '📦',
+      icon TEXT NOT NULL DEFAULT 'ðŸ“¦',
       category_id INTEGER REFERENCES categories(id) ON DELETE SET NULL,
       image_url TEXT,
       sku TEXT,
@@ -432,9 +432,12 @@ async function initializePostgresDatabase(db: Database): Promise<void> {
     CREATE TABLE IF NOT EXISTS login_attempts (
       key TEXT PRIMARY KEY,
       count INTEGER NOT NULL,
-      reset_at INTEGER NOT NULL
+      reset_at BIGINT NOT NULL
     )
   `);
+
+  // Safely upgrade existing PostgreSQL databases without deleting records.
+  await db.execute("ALTER TABLE login_attempts ALTER COLUMN reset_at TYPE BIGINT");
 
   await db.execute("CREATE INDEX IF NOT EXISTS idx_products_category ON products(category_id)");
   await db.execute("CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status)");
@@ -453,7 +456,7 @@ async function initializePostgresDatabase(db: Database): Promise<void> {
 
   for (let index = 0; index < seedCategoryNames.length; index++) {
     const name = seedCategoryNames[index];
-    const detail = CATEGORY_DETAILS[name] ?? { icon: "📁", description: "" };
+    const detail = CATEGORY_DETAILS[name] ?? { icon: "ðŸ“", description: "" };
 
     await db.execute(
       `INSERT INTO categories (name, icon, description, sort_order)
