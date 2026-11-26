@@ -45,3 +45,14 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+.vercel
+.env*
+
+# Local temporary files
+.env.vercel-check
+*.before-notification-update
+scripts/draft-book-catalogue.json
+scripts/import-draft-catalogue.mjs
+scripts/import-draft-catalogue-production.mjs
+scripts/correct-production-prices.mjs

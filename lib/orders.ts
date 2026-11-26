@@ -1,4 +1,4 @@
-import { getDb, type QueryClient } from "./db.ts";
+﻿import { getDb, type QueryClient } from "./db.ts";
 import { getProductById } from "./catalog.ts";
 import {
   canTransitionOrderStatus,
@@ -19,6 +19,7 @@ type OrderRow = {
   status: OrderStatus;
   total: number | string;
   payment: string;
+  notification_method: "SMS" | "WhatsApp";
   delivery_address: string;
   customer_id: number | bigint;
   customer_name: string;
@@ -37,7 +38,7 @@ type ItemRow = {
 
 const ORDER_SELECT = `
   SELECT o.id, o.order_number, o.placed_at, o.updated_at, o.status, o.total,
-         o.payment, o.delivery_address, o.customer_id,
+         o.payment, o.notification_method, o.delivery_address, o.customer_id,
          c.name AS customer_name, c.phone AS customer_phone,
          c.email AS customer_email, c.address AS customer_address
   FROM orders o
@@ -52,6 +53,7 @@ function toOrder(row: OrderRow, items: OrderItemRecord[]): OrderRecord {
     status: row.status,
     total: Number(row.total),
     payment: row.payment,
+    notificationMethod: row.notification_method,
     deliveryAddress: row.delivery_address,
     customer: {
       id: Number(row.customer_id),
@@ -92,6 +94,7 @@ export type NewOrderInput = {
     address: string;
   };
   payment: string;
+  notificationMethod: "SMS" | "WhatsApp";
   items: { productId: number; quantity: number }[];
 };
 
@@ -125,12 +128,17 @@ function validateOrderInput(input: NewOrderInput) {
     if (item.quantity > 100) throw new Error("The maximum quantity is 100 per item.");
   }
 
+  if (input.notificationMethod !== "SMS" && input.notificationMethod !== "WhatsApp") {
+    throw new Error("Choose SMS or WhatsApp for order updates.");
+  }
+
   return {
     name,
     phone,
     address,
     email,
     payment: normalizePaymentPreference(input.payment),
+    notificationMethod: input.notificationMethod,
   };
 }
 
@@ -202,10 +210,10 @@ export async function createOrder(input: NewOrderInput): Promise<OrderRecord> {
 
     const orderResult = await tx.query<{ id: number | bigint }>(
       `INSERT INTO orders
-        (order_number, customer_id, placed_at, updated_at, status, total, payment, delivery_address)
-       VALUES (?, ?, ?, ?, 'Pending', ?, ?, ?)
+        (order_number, customer_id, placed_at, updated_at, status, total, payment, notification_method, delivery_address)
+       VALUES (?, ?, ?, ?, 'Pending', ?, ?, ?, ?)
        RETURNING id`,
-      [orderNumber, customerId, now, now, total, customer.payment, customer.address]
+      [orderNumber, customerId, now, now, total, customer.payment, customer.notificationMethod, customer.address]
     );
     const orderId = Number(orderResult.rows[0]?.id);
 
@@ -229,6 +237,7 @@ export async function createOrder(input: NewOrderInput): Promise<OrderRecord> {
       status: "Pending" as const,
       total,
       payment: customer.payment,
+      notificationMethod: customer.notificationMethod,
       deliveryAddress: customer.address,
       customer: {
         id: customerId,

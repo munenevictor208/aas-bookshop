@@ -1,4 +1,4 @@
-import { checkIpRateLimit, getClientIp } from "@/lib/auth";
+﻿import { checkIpRateLimit, getClientIp } from "@/lib/auth";
 import { createOrder } from "@/lib/orders";
 import { isSameOriginRequest } from "@/lib/security";
 
@@ -50,6 +50,7 @@ export async function POST(request: Request) {
         address: stringValue(customer.address),
       },
       payment: stringValue(data.payment),
+      notificationMethod: stringValue(data.notificationMethod) as "SMS" | "WhatsApp",
       items,
     });
     return Response.json({ order }, { status: 201 });

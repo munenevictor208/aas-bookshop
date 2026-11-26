@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
@@ -34,6 +34,7 @@ export default function CheckoutPage() {
       address: String(form.get("address") ?? "").trim(),
     };
     const payment = String(form.get("payment") ?? "Cash on Delivery");
+    const notificationMethod = String(form.get("notificationMethod") ?? "SMS");
 
     try {
       const response = await fetch("/api/orders", {
@@ -42,6 +43,7 @@ export default function CheckoutPage() {
         body: JSON.stringify({
           customer,
           payment,
+          notificationMethod,
           items: details.map(({ product, quantity }) => ({
             productId: product.id,
             quantity,
@@ -91,7 +93,7 @@ export default function CheckoutPage() {
           <div className="h-1.5 bg-gold-400" />
           <div className="text-center">
             <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-brand-100 text-3xl text-brand-800">
-              ✓
+              âœ“
             </div>
             <h1 className="font-serif text-3xl font-bold text-brand-900">
               Order Confirmed!
@@ -124,7 +126,7 @@ export default function CheckoutPage() {
                   className="flex justify-between gap-4 text-cocoa-700"
                 >
                   <span>
-                    {item.name} × {item.quantity}
+                    {item.name} Ã— {item.quantity}
                   </span>
                   <span>{formatPrice(item.lineTotal)}</span>
                 </div>
@@ -244,6 +246,19 @@ export default function CheckoutPage() {
               <option>M-Pesa on Delivery</option>
               <option>Bank Transfer on Delivery</option>
             </select>
+            <div className="mt-4">
+              <span className={labelClass}>Preferred order updates</span>
+              <div className="mt-2 flex flex-col gap-2">
+                <label className="flex items-center gap-2 text-sm">
+                  <input type="radio" name="notificationMethod" value="SMS" defaultChecked required />
+                  SMS
+                </label>
+                <label className="flex items-center gap-2 text-sm">
+                  <input type="radio" name="notificationMethod" value="WhatsApp" required />
+                  WhatsApp
+                </label>
+              </div>
+            </div>
           </label>
 
           {error && (
@@ -257,7 +272,7 @@ export default function CheckoutPage() {
             disabled={submitting}
             className="brand-button-gold w-full disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {submitting ? "Placing order…" : "Place order"}
+            {submitting ? "Placing orderâ€¦" : "Place order"}
           </button>
           <p className="text-center text-xs text-cocoa-500">
             No online payment is taken. Pay when your order is delivered.
@@ -275,7 +290,7 @@ export default function CheckoutPage() {
               {details.map(({ product, quantity, lineTotal }) => (
                 <div key={product.id} className="flex justify-between gap-4">
                   <span className="text-sm text-cocoa-700">
-                    {product.name} × {quantity}
+                    {product.name} Ã— {quantity}
                   </span>
                   <span className="whitespace-nowrap text-sm font-bold text-brand-900">
                     {formatPrice(lineTotal)}

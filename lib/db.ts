@@ -1,4 +1,4 @@
-import { mkdirSync } from "node:fs";
+﻿import { mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -8,7 +8,7 @@ import { attachDatabasePool } from "@vercel/functions";
 import { categories as seedCategoryNames, products as seedProducts } from "../app/data/products.ts";
 import { ORDER_STATUSES } from "./types.ts";
 
-export const SCHEMA_VERSION = 3;
+export const SCHEMA_VERSION = 4;
 
 export type DbRow = Record<string, unknown>;
 
@@ -171,7 +171,7 @@ function createFinalSchema(db: DatabaseSync): void {
     `CREATE TABLE IF NOT EXISTS categories (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL UNIQUE COLLATE NOCASE,
-      icon TEXT NOT NULL DEFAULT 'ðŸ“',
+      icon TEXT NOT NULL DEFAULT 'Ã°Å¸â€œÂ',
       description TEXT NOT NULL DEFAULT '',
       sort_order INTEGER NOT NULL DEFAULT 0,
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
@@ -183,7 +183,7 @@ function createFinalSchema(db: DatabaseSync): void {
       name TEXT NOT NULL,
       description TEXT NOT NULL DEFAULT '',
       price NUMERIC NOT NULL CHECK (price >= 0),
-      icon TEXT NOT NULL DEFAULT 'ðŸ“¦',
+      icon TEXT NOT NULL DEFAULT 'Ã°Å¸â€œÂ¦',
       category_id INTEGER REFERENCES categories(id) ON DELETE SET NULL,
       image_url TEXT,
       sku TEXT,
@@ -246,19 +246,19 @@ function createFinalSchema(db: DatabaseSync): void {
 
 const CATEGORY_DETAILS: Record<string, { icon: string; description: string }> = {
   Books: {
-    icon: "ðŸ“š",
+    icon: "Ã°Å¸â€œÅ¡",
     description: "Exercise books, reading books and textbooks for every learner.",
   },
   Stationery: {
-    icon: "âœï¸",
+    icon: "Ã¢Å“ÂÃ¯Â¸Â",
     description: "Pens, pencils, markers and everyday writing essentials.",
   },
   "School Bags": {
-    icon: "ðŸŽ’",
+    icon: "Ã°Å¸Å½â€™",
     description: "Durable bags made to carry a full school day.",
   },
   "School Supplies": {
-    icon: "ðŸ“",
+    icon: "Ã°Å¸â€œÂ",
     description: "Geometry sets, rulers and tools for every lesson.",
   },
 };
@@ -266,6 +266,11 @@ const CATEGORY_DETAILS: Record<string, { icon: string; description: string }> = 
 function runMigrations(db: DatabaseSync): void {
   const currentVersion = Number(getMeta(db, "schema_version") ?? 0);
   createFinalSchema(db);
+
+  const orderColumns = db.prepare("PRAGMA table_info(orders)").all() as { name: string }[];
+  if (!orderColumns.some((column) => column.name === "notification_method")) {
+    db.exec("ALTER TABLE orders ADD COLUMN notification_method TEXT NOT NULL DEFAULT 'SMS'");
+  }
 
   if (currentVersion < 3) {
     const columns = db.prepare("PRAGMA table_info(categories)").all() as { name: string }[];
@@ -301,7 +306,7 @@ function seed(db: DatabaseSync): void {
       "INSERT INTO categories (name, icon, description, sort_order) VALUES (?, ?, ?, ?)"
     );
     seedCategoryNames.forEach((name, index) => {
-      const detail = CATEGORY_DETAILS[name] ?? { icon: "ðŸ“", description: "" };
+      const detail = CATEGORY_DETAILS[name] ?? { icon: "Ã°Å¸â€œÂ", description: "" };
       const result = insertCategory.run(name, detail.icon, detail.description, index);
       categoryIds.set(name, Number(result.lastInsertRowid));
     });
@@ -359,7 +364,7 @@ async function initializePostgresDatabase(db: Database): Promise<void> {
     CREATE TABLE IF NOT EXISTS categories (
       id SERIAL PRIMARY KEY,
       name TEXT NOT NULL UNIQUE,
-      icon TEXT NOT NULL DEFAULT 'ðŸ“',
+      icon TEXT NOT NULL DEFAULT 'Ã°Å¸â€œÂ',
       description TEXT NOT NULL DEFAULT '',
       sort_order INTEGER NOT NULL DEFAULT 0,
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP::text
@@ -377,7 +382,7 @@ async function initializePostgresDatabase(db: Database): Promise<void> {
       name TEXT NOT NULL,
       description TEXT NOT NULL DEFAULT '',
       price NUMERIC NOT NULL CHECK (price >= 0),
-      icon TEXT NOT NULL DEFAULT 'ðŸ“¦',
+      icon TEXT NOT NULL DEFAULT 'Ã°Å¸â€œÂ¦',
       category_id INTEGER REFERENCES categories(id) ON DELETE SET NULL,
       image_url TEXT,
       sku TEXT,
@@ -438,6 +443,7 @@ async function initializePostgresDatabase(db: Database): Promise<void> {
 
   // Safely upgrade existing PostgreSQL databases without deleting records.
   await db.execute("ALTER TABLE login_attempts ALTER COLUMN reset_at TYPE BIGINT");
+  await db.execute("ALTER TABLE orders ADD COLUMN IF NOT EXISTS notification_method TEXT NOT NULL DEFAULT 'SMS'");
 
   await db.execute("CREATE INDEX IF NOT EXISTS idx_products_category ON products(category_id)");
   await db.execute("CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status)");
@@ -456,7 +462,7 @@ async function initializePostgresDatabase(db: Database): Promise<void> {
 
   for (let index = 0; index < seedCategoryNames.length; index++) {
     const name = seedCategoryNames[index];
-    const detail = CATEGORY_DETAILS[name] ?? { icon: "ðŸ“", description: "" };
+    const detail = CATEGORY_DETAILS[name] ?? { icon: "Ã°Å¸â€œÂ", description: "" };
 
     await db.execute(
       `INSERT INTO categories (name, icon, description, sort_order)

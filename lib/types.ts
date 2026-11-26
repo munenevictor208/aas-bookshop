@@ -1,4 +1,4 @@
-export type Product = {
+﻿export type Product = {
   id: number;
   name: string;
   price: number;
@@ -94,6 +94,7 @@ export type OrderRecord = {
   status: OrderStatus;
   total: number;
   payment: string;
+  notificationMethod: "SMS" | "WhatsApp";
   deliveryAddress: string;
   customer: {
     id: number;
